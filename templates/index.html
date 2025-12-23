@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CryptoVault - Cryptographic Security System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            opacity: 0.9;
+        }
+
+        .auth-section {
+            padding: 30px;
+            display: none;
+        }
+
+        .auth-section.active {
+            display: block;
+        }
+
+        .tabs {
+            display: flex;
+            background: #f5f5f5;
+            border-bottom: 2px solid #ddd;
+            flex-wrap: wrap;
+        }
+
+        .tab {
+            flex: 1;
+            min-width: 120px;
+            padding: 15px 20px;
+            background: #f5f5f5;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+            border-bottom: 3px solid transparent;
+        }
+
+        .tab:hover {
+            background: #e0e0e0;
+        }
+
+        .tab.active {
+            background: white;
+            border-bottom: 3px solid #667eea;
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        .tab-content {
+            display: none;
+            padding: 30px;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .hint {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+            font-style: italic;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="number"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        textarea {
+            min-height: 100px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .btn {
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            font-weight: 600;
+            position: relative;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .user-info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .user-info.active {
+            display: block;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .result-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            border-left: 4px solid #667eea;
+            word-break: break-all;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .file-upload {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color 0.3s, background 0.3s;
+        }
+
+        .file-upload:hover {
+            border-color: #667eea;
+            background: #f8f9ff;
+        }
+
+        .file-upload.dragover {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+
+        .file-upload.has-file {
+            border-color: #28a745;
+            background: #f0fff4;
+        }
+
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-card h3 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .info-box {
+            background: #e7f3ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+
+        .info-box h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 CryptoVault</h1>
+            <p>Cryptographic Security System</p>
+        </div>
+
+        <!-- Authentication Section -->
+        <div id="authSection" class="auth-section active">
+            <div class="tabs">
+                <button class="tab active" onclick="showAuthTab('login')">Login</button>
+                <button class="tab" onclick="showAuthTab('register')">Register</button>
+            </div>
+
+            <div id="loginTab" class="tab-content active">
+                <div class="message" id="loginMessage"></div>
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="loginUsername" placeholder="Enter username" onkeypress="if(event.key==='Enter') login()">
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="loginPassword" placeholder="Enter password" onkeypress="if(event.key==='Enter') login()">
+                </div>
+                <button class="btn" onclick="login()" id="loginBtn">Login</button>
+            </div>
+
+            <div id="registerTab" class="tab-content">
+                <div class="message" id="registerMessage"></div>
+                <div class="info-box">
+                    <h4>Password Requirements:</h4>
+                    <ul style="margin-left: 20px;">
+                        <li>Minimum 12 characters</li>
+                        <li>Uppercase letters (A-Z)</li>
+                        <li>Lowercase letters (a-z)</li>
+                        <li>Numbers (0-9)</li>
+                        <li>Special characters (!@#$% etc.)</li>
+                        <li>No obvious sequences (123, abc)</li>
+                    </ul>
+                </div>
+                <div class="form-group">
+                    <label>Username:</label>
+                    <input type="text" id="regUsername" placeholder="Enter username" onkeypress="if(event.key==='Enter') register()">
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="regPassword" placeholder="Enter password" onkeypress="if(event.key==='Enter') register()">
+                    <div class="hint">Example of a good password: MySecure!@#Pass2024</div>
+                </div>
+                <button class="btn" onclick="register()" id="registerBtn">Register</button>
+            </div>
+        </div>
+
+        <!-- Main Interface -->
+        <div id="mainSection" class="auth-section">
+            <div class="user-info active" id="userInfo">
+                <strong>User:</strong> <span id="usernameDisplay"></span>
+                <button class="btn btn-danger" onclick="logout()" style="float: right; padding: 5px 15px;">Logout</button>
+            </div>
+
+            <div class="tabs">
+                <button class="tab active" onclick="showTab('files')">📁 Files</button>
+                <button class="tab" onclick="showTab('caesar')">🔤 Caesar</button>
+                <button class="tab" onclick="showTab('vigenere')">🔐 Vigenere</button>
+                <button class="tab" onclick="showTab('blockchain')">⛓️ Blockchain</button>
+                <button class="tab" onclick="showTab('logs')">📋 Logs</button>
+            </div>
+
+            <!-- Files Tab -->
+            <div id="filesTab" class="tab-content active">
+                <h2>File Encryption</h2>
+                <div class="info-box">
+                    <h4>How it works:</h4>
+                    <p>Select a file, enter a password, and choose an encryption algorithm. The file will be encrypted and automatically downloaded. Use the same password for decryption.</p>
+                </div>
+                <div class="grid">
+                    <div>
+                        <h3>🔒 Encrypt File</h3>
+                        <div class="message" id="encryptMessage"></div>
+                        <div class="form-group">
+                            <label>Select File:</label>
+                            <div class="file-upload" id="encryptUpload" onclick="document.getElementById('encryptFile').click()">
+                                <p id="encryptFileText">Click or drag file here</p>
+                                <input type="file" id="encryptFile" style="display: none;" onchange="handleFileSelect('encrypt')">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Encryption Password:</label>
+                            <input type="password" id="encryptPassword" placeholder="Enter password">
+                            <div class="hint">Remember this password! You'll need it for decryption.</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Algorithm:</label>
+                            <select id="encryptAlgorithm">
+                                <option value="AES-GCM">AES-256-GCM (recommended)</option>
+                                <option value="ChaCha20-Poly1305">ChaCha20-Poly1305</option>
+                            </select>
+                        </div>
+                        <button class="btn" onclick="encryptFile()" id="encryptBtn">Encrypt</button>
+                    </div>
+
+                    <div>
+                        <h3>🔓 Decrypt File</h3>
+                        <div class="message" id="decryptMessage"></div>
+                        <div class="form-group">
+                            <label>Select Encrypted File:</label>
+                            <div class="file-upload" id="decryptUpload" onclick="document.getElementById('decryptFile').click()">
+                                <p id="decryptFileText">Click or drag file here</p>
+                                <input type="file" id="decryptFile" style="display: none;" onchange="handleFileSelect('decrypt')">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Decryption Password:</label>
+                            <input type="password" id="decryptPassword" placeholder="Enter password">
+                            <div class="hint">Use the same password used for encryption.</div>
+                        </div>
+                        <button class="btn" onclick="decryptFile()" id="decryptBtn">Decrypt</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Caesar Tab -->
+            <div id="caesarTab" class="tab-content">
+                <h2>Caesar Cipher (from scratch)</h2>
+                <div class="info-box">
+                    <h4>About Caesar Cipher:</h4>
+                    <p>A classic substitution cipher where each letter is shifted by a certain number of positions in the alphabet. Use frequency analysis to crack without knowing the shift.</p>
+                </div>
+                <div class="grid">
+                    <div>
+                        <h3>Encrypt</h3>
+                        <div class="form-group">
+                            <label>Text:</label>
+                            <textarea id="caesarText" placeholder="Enter text to encrypt"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Shift (0-25):</label>
+                            <input type="number" id="caesarShift" value="3" min="0" max="25">
+                            <div class="hint">Classic Caesar shift is 3 positions</div>
+                        </div>
+                        <button class="btn" onclick="caesarEncrypt()" id="caesarEncryptBtn">Encrypt</button>
+                        <div class="result-box" id="caesarEncrypted" style="display: none;">
+                            <strong>Encrypted Text:</strong><br>
+                            <span id="caesarEncryptedText"></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Decrypt / Attack</h3>
+                        <div class="form-group">
+                            <label>Encrypted Text:</label>
+                            <textarea id="caesarCiphertext" placeholder="Enter encrypted text"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Shift (if known):</label>
+                            <input type="number" id="caesarDecryptShift" value="3" min="0" max="25">
+                        </div>
+                        <button class="btn" onclick="caesarDecrypt()" id="caesarDecryptBtn">Decrypt</button>
+                        <button class="btn btn-secondary" onclick="caesarAttack()" id="caesarAttackBtn">🔍 Frequency Analysis</button>
+                        <div class="hint" style="margin-top: 10px;">Frequency analysis will automatically find the most likely shift</div>
+                        <div class="result-box" id="caesarDecrypted" style="display: none;">
+                            <strong>Decrypted Text:</strong><br>
+                            <span id="caesarDecryptedText"></span>
+                        </div>
+                        <div class="result-box" id="caesarAttackResults" style="display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Vigenere Tab -->
+            <div id="vigenereTab" class="tab-content">
+                <h2>Vigenere Cipher (from scratch)</h2>
+                <div class="info-box">
+                    <h4>About Vigenere Cipher:</h4>
+                    <p>A polyalphabetic cipher that uses a keyword to shift letters. More secure than Caesar cipher as it uses different shifts for different positions.</p>
+                </div>
+                <div class="grid">
+                    <div>
+                        <h3>Encrypt</h3>
+                        <div class="form-group">
+                            <label>Text:</label>
+                            <textarea id="vigenereText" placeholder="Enter text to encrypt"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Key (letters only):</label>
+                            <input type="text" id="vigenereKey" placeholder="Enter key (e.g., KEY)" oninput="this.value = this.value.replace(/[^a-zA-Z]/g, '')">
+                            <div class="hint">Key must contain only Latin alphabet letters</div>
+                        </div>
+                        <button class="btn" onclick="vigenereEncrypt()" id="vigenereEncryptBtn">Encrypt</button>
+                        <div class="result-box" id="vigenereEncrypted" style="display: none;">
+                            <strong>Encrypted Text:</strong><br>
+                            <span id="vigenereEncryptedText"></span>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3>Decrypt</h3>
+                        <div class="form-group">
+                            <label>Encrypted Text:</label>
+                            <textarea id="vigenereCiphertext" placeholder="Enter encrypted text"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Key:</label>
+                            <input type="text" id="vigenereDecryptKey" placeholder="Enter key" oninput="this.value = this.value.replace(/[^a-zA-Z]/g, '')">
+                            <div class="hint">Use the same key used for encryption</div>
+                        </div>
+                        <button class="btn" onclick="vigenereDecrypt()" id="vigenereDecryptBtn">Decrypt</button>
+                        <div class="result-box" id="vigenereDecrypted" style="display: none;">
+                            <strong>Decrypted Text:</strong><br>
+                            <span id="vigenereDecryptedText"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Blockchain Tab -->
+            <div id="blockchainTab" class="tab-content">
+                <h2>Blockchain Audit</h2>
+                <div class="info-box">
+                    <h4>About Blockchain:</h4>
+                    <p>All system actions are recorded in the blockchain to ensure audit immutability. Each block contains transactions and is protected by Proof of Work.</p>
+                </div>
+                <button class="btn" onclick="loadBlockchainInfo()" id="blockchainBtn">🔄 Refresh Information</button>
+                <div class="stats" id="blockchainStats"></div>
+                <div class="result-box" id="blockchainInfo" style="display: none;"></div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="logsTab" class="tab-content">
+                <h2>Audit Logs</h2>
+                <div class="info-box">
+                    <h4>About Logs:</h4>
+                    <p>All security events are recorded in audit logs. Sensitive data (usernames, IP addresses) are hashed to protect privacy.</p>
+                </div>
+                <button class="btn" onclick="loadAuditLogs()" id="logsBtn">🔄 Load Logs</button>
+                <div id="auditLogs" style="margin-top: 20px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Проверка сессии при загрузке
+        checkSession();
+
+        function showAuthTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            if (tab === 'login') {
+                document.querySelector('.tab').classList.add('active');
+                document.getElementById('loginTab').classList.add('active');
+            } else {
+                document.querySelectorAll('.tab')[1].classList.add('active');
+                document.getElementById('registerTab').classList.add('active');
+            }
+        }
+
+        function showTab(tab) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(tab + 'Tab').classList.add('active');
+        }
+
+        function showMessage(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.textContent = message;
+            el.className = 'message ' + type;
+            el.style.display = 'block';
+            setTimeout(() => el.style.display = 'none', 7000);
+        }
+
+        function setLoading(btnId, loading) {
+            const btn = document.getElementById(btnId);
+            if (loading) {
+                btn.disabled = true;
+                btn.innerHTML = btn.textContent + '<span class="loading"></span>';
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = btn.textContent.replace('<span class="loading"></span>', '');
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('regUsername').value.trim();
+            const password = document.getElementById('regPassword').value;
+
+            if (!username || !password) {
+                showMessage('registerMessage', 'Fill in all fields', 'error');
+                return;
+            }
+
+            setLoading('registerBtn', true);
+            try {
+                const response = await fetch('/api/register', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+
+                const data = await response.json();
+                showMessage('registerMessage', data.message, data.success ? 'success' : 'error');
+                
+                if (data.success) {
+                    document.getElementById('regUsername').value = '';
+                    document.getElementById('regPassword').value = '';
+                    setTimeout(() => showAuthTab('login'), 2000);
+                }
+            } catch (error) {
+                showMessage('registerMessage', 'Connection error: ' + error.message, 'error');
+            } finally {
+                setLoading('registerBtn', false);
+            }
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+
+            if (!username || !password) {
+                showMessage('loginMessage', 'Fill in all fields', 'error');
+                return;
+            }
+
+            setLoading('loginBtn', true);
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({username, password})
+                });
+
+                const data = await response.json();
+                showMessage('loginMessage', data.message, data.success ? 'success' : 'error');
+                
+                if (data.success) {
+                    document.getElementById('usernameDisplay').textContent = username;
+                    document.getElementById('authSection').classList.remove('active');
+                    document.getElementById('mainSection').classList.add('active');
+                    document.getElementById('loginUsername').value = '';
+                    document.getElementById('loginPassword').value = '';
+                }
+            } catch (error) {
+                showMessage('loginMessage', 'Connection error: ' + error.message, 'error');
+            } finally {
+                setLoading('loginBtn', false);
+            }
+        }
+
+        async function logout() {
+            await fetch('/api/logout', {method: 'POST'});
+            document.getElementById('authSection').classList.add('active');
+            document.getElementById('mainSection').classList.remove('active');
+        }
+
+        async function checkSession() {
+            try {
+                const response = await fetch('/api/check_session');
+                const data = await response.json();
+                
+                if (data.authenticated) {
+                    document.getElementById('usernameDisplay').textContent = data.username;
+                    document.getElementById('authSection').classList.remove('active');
+                    document.getElementById('mainSection').classList.add('active');
+                }
+            } catch (error) {
+                console.error('Session check failed:', error);
+            }
+        }
+
+        function handleFileSelect(type) {
+            const input = type === 'encrypt' ? document.getElementById('encryptFile') : document.getElementById('decryptFile');
+            const upload = type === 'encrypt' ? document.getElementById('encryptUpload') : document.getElementById('decryptUpload');
+            const textEl = type === 'encrypt' ? document.getElementById('encryptFileText') : document.getElementById('decryptFileText');
+            
+            if (input.files.length > 0) {
+                textEl.textContent = 'File: ' + input.files[0].name + ' (' + (input.files[0].size / 1024).toFixed(2) + ' KB)';
+                upload.classList.add('has-file');
+            }
+        }
+
+        async function encryptFile() {
+            const fileInput = document.getElementById('encryptFile');
+            const password = document.getElementById('encryptPassword').value;
+            const algorithm = document.getElementById('encryptAlgorithm').value;
+
+            if (!fileInput.files[0]) {
+                showMessage('encryptMessage', 'Select a file', 'error');
+                return;
+            }
+
+            if (!password) {
+                showMessage('encryptMessage', 'Enter password', 'error');
+                return;
+            }
+
+            setLoading('encryptBtn', true);
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('password', password);
+            formData.append('algorithm', algorithm);
+
+            try {
+                const response = await fetch('/api/encrypt_file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'encrypted_' + fileInput.files[0].name;
+                    a.click();
+                    showMessage('encryptMessage', 'File encrypted and downloaded successfully!', 'success');
+                    document.getElementById('encryptPassword').value = '';
+                } else {
+                    const data = await response.json();
+                    showMessage('encryptMessage', data.message || 'Encryption error', 'error');
+                }
+            } catch (error) {
+                showMessage('encryptMessage', 'Error: ' + error.message, 'error');
+            } finally {
+                setLoading('encryptBtn', false);
+            }
+        }
+
+        async function decryptFile() {
+            const fileInput = document.getElementById('decryptFile');
+            const password = document.getElementById('decryptPassword').value;
+
+            if (!fileInput.files[0]) {
+                showMessage('decryptMessage', 'Select a file', 'error');
+                return;
+            }
+
+            if (!password) {
+                showMessage('decryptMessage', 'Enter password', 'error');
+                return;
+            }
+
+            setLoading('decryptBtn', true);
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('password', password);
+
+            try {
+                const response = await fetch('/api/decrypt_file', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'decrypted_' + fileInput.files[0].name.replace('.encrypted', '');
+                    a.click();
+                    showMessage('decryptMessage', 'File decrypted and downloaded successfully!', 'success');
+                    document.getElementById('decryptPassword').value = '';
+                } else {
+                    const data = await response.json();
+                    showMessage('decryptMessage', data.message || 'Decryption error. Check password and file.', 'error');
+                }
+            } catch (error) {
+                showMessage('decryptMessage', 'Error: ' + error.message, 'error');
+            } finally {
+                setLoading('decryptBtn', false);
+            }
+        }
+
+        async function caesarEncrypt() {
+            const text = document.getElementById('caesarText').value.trim();
+            const shift = parseInt(document.getElementById('caesarShift').value);
+
+            if (!text) {
+                showMessage('caesarEncrypted', 'Enter text to encrypt', 'error');
+                return;
+            }
+
+            setLoading('caesarEncryptBtn', true);
+            try {
+                const response = await fetch('/api/caesar_encrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text, shift})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('caesarEncryptedText').textContent = data.encrypted;
+                    document.getElementById('caesarEncrypted').style.display = 'block';
+                } else {
+                    showMessage('caesarEncrypted', data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('caesarEncrypted', 'Error: ' + error.message, 'error');
+            } finally {
+                setLoading('caesarEncryptBtn', false);
+            }
+        }
+
+        async function caesarDecrypt() {
+            const text = document.getElementById('caesarCiphertext').value.trim();
+            const shift = parseInt(document.getElementById('caesarDecryptShift').value);
+
+            if (!text) {
+                showMessage('caesarDecrypted', 'Enter encrypted text', 'error');
+                return;
+            }
+
+            setLoading('caesarDecryptBtn', true);
+            try {
+                const response = await fetch('/api/caesar_decrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text, shift})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('caesarDecryptedText').textContent = data.decrypted;
+                    document.getElementById('caesarDecrypted').style.display = 'block';
+                } else {
+                    showMessage('caesarDecrypted', data.message, 'error');
+                }
+            } catch (error) {
+                showMessage('caesarDecrypted', 'Error: ' + error.message, 'error');
+            } finally {
+                setLoading('caesarDecryptBtn', false);
+            }
+        }
+
+        async function caesarAttack() {
+            const text = document.getElementById('caesarCiphertext').value.trim();
+
+            if (!text) {
+                alert('Enter encrypted text for analysis');
+                return;
+            }
+
+            if (text.length < 10) {
+                alert('Text too short for frequency analysis (minimum 10 characters)');
+                return;
+            }
+
+            setLoading('caesarAttackBtn', true);
+            try {
+                const response = await fetch('/api/caesar_attack', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    let html = '<strong>Frequency Analysis Results (top-3):</strong><br><br>';
+                    data.results.forEach((r, i) => {
+                        const isBest = i === 0;
+                        html += `<div style="margin-bottom: 10px; ${isBest ? 'background: #d4edda; padding: 10px; border-radius: 5px;' : ''}">
+                            <strong>${i+1}. Shift ${r.shift}</strong> (score: ${r.score})<br>
+                            Text: "${r.text}"
+                        </div>`;
+                    });
+                    document.getElementById('caesarAttackResults').innerHTML = html;
+                    document.getElementById('caesarAttackResults').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                setLoading('caesarAttackBtn', false);
+            }
+        }
+
+        async function vigenereEncrypt() {
+            const text = document.getElementById('vigenereText').value.trim();
+            const key = document.getElementById('vigenereKey').value.trim();
+
+            if (!text) {
+                alert('Enter text to encrypt');
+                return;
+            }
+
+            if (!key) {
+                alert('Enter key');
+                return;
+            }
+
+            setLoading('vigenereEncryptBtn', true);
+            try {
+                const response = await fetch('/api/vigenere_encrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text, key})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('vigenereEncryptedText').textContent = data.encrypted;
+                    document.getElementById('vigenereEncrypted').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                setLoading('vigenereEncryptBtn', false);
+            }
+        }
+
+        async function vigenereDecrypt() {
+            const text = document.getElementById('vigenereCiphertext').value.trim();
+            const key = document.getElementById('vigenereDecryptKey').value.trim();
+
+            if (!text) {
+                alert('Enter encrypted text');
+                return;
+            }
+
+            if (!key) {
+                alert('Enter key');
+                return;
+            }
+
+            setLoading('vigenereDecryptBtn', true);
+            try {
+                const response = await fetch('/api/vigenere_decrypt', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({text, key})
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    document.getElementById('vigenereDecryptedText').textContent = data.decrypted;
+                    document.getElementById('vigenereDecrypted').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                setLoading('vigenereDecryptBtn', false);
+            }
+        }
+
+        async function loadBlockchainInfo() {
+            setLoading('blockchainBtn', true);
+            try {
+                const response = await fetch('/api/blockchain_info');
+                const data = await response.json();
+                
+                if (data.success) {
+                    const info = data.info;
+                    let html = '<div class="stats">';
+                    html += `<div class="stat-card"><h3>${info.length}</h3><p>Blocks</p></div>`;
+                    html += `<div class="stat-card"><h3>${info.total_transactions}</h3><p>Transactions</p></div>`;
+                    html += `<div class="stat-card"><h3>${info.difficulty}</h3><p>PoW Difficulty</p></div>`;
+                    html += `<div class="stat-card"><h3>${info.is_valid ? '✓' : '✗'}</h3><p>Validity</p></div>`;
+                    html += '</div>';
+                    document.getElementById('blockchainStats').innerHTML = html;
+                }
+            } catch (error) {
+                alert('Ошибка загрузки: ' + error.message);
+            } finally {
+                setLoading('blockchainBtn', false);
+            }
+        }
+
+        async function loadAuditLogs() {
+            setLoading('logsBtn', true);
+            try {
+                const response = await fetch('/api/audit_logs?limit=50');
+                const data = await response.json();
+                
+                if (data.success) {
+                    if (data.logs.length === 0) {
+                        document.getElementById('auditLogs').innerHTML = '<p>Logs are empty</p>';
+                    } else {
+                        let html = '<table style="width:100%; border-collapse: collapse; background: white;">';
+                        html += '<tr style="background:#667eea; color:white;"><th style="padding:10px; text-align:left;">Time</th><th style="padding:10px; text-align:left;">Event</th><th style="padding:10px; text-align:left;">Status</th></tr>';
+                        
+                        data.logs.forEach(log => {
+                            const date = new Date(log.timestamp * 1000).toLocaleString('en-US');
+                            html += `<tr style="border-bottom:1px solid #ddd;">
+                                <td style="padding:10px;">${date}</td>
+                                <td style="padding:10px;">${log.event_type}</td>
+                                <td style="padding:10px;">${log.success ? '✓ Success' : '✗ Error'}</td>
+                            </tr>`;
+                        });
+                        
+                        html += '</table>';
+                        document.getElementById('auditLogs').innerHTML = html;
+                    }
+                }
+            } catch (error) {
+                alert('Ошибка загрузки: ' + error.message);
+            } finally {
+                setLoading('logsBtn', false);
+            }
+        }
+
+        // Load information when opening tab
+        document.querySelectorAll('.tab').forEach(tab => {
+            tab.addEventListener('click', function() {
+                if (this.textContent.includes('Blockchain')) {
+                    setTimeout(loadBlockchainInfo, 100);
+                } else if (this.textContent.includes('Logs')) {
+                    setTimeout(loadAuditLogs, 100);
+                }
+            });
+        });
+    </script>
+</body>
+</html>

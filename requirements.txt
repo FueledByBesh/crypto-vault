@@ -1,0 +1,26 @@
+# CryptoVault - Cryptographic Security Suite
+# Dependencies for final exam project
+
+# Core cryptographic libraries (where explicitly allowed)
+cryptography>=41.0.0
+pycryptodome>=3.19.0
+
+# Password hashing
+argon2-cffi>=23.1.0
+bcrypt>=4.0.0
+
+# TOTP/MFA
+pyotp>=2.9.0
+qrcode>=7.4.2
+Pillow>=10.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Web framework
+Flask>=3.0.0
+
+# Testing
+pytest>=7.4.0
+pytest-cov>=4.1.0
+
