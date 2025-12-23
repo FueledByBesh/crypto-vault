@@ -47,9 +47,17 @@ def login():
     success, token, message = vault.login(username, password, ip_address=ip_address)
     
     if success:
-        session['username'] = username
-        session['token'] = token
-        return jsonify({'success': True, 'message': message, 'token': token})
+        # Check if MFA is enabled
+        user = vault.user_manager.get_user(username)
+        if user and user.mfa_enabled:
+            # MFA required - don't create session yet
+            session['pending_username'] = username
+            return jsonify({'success': True, 'mfa_required': True, 'message': 'MFA code required'})
+        else:
+            # No MFA - proceed with login
+            session['username'] = username
+            session['token'] = token
+            return jsonify({'success': True, 'message': message, 'token': token})
     else:
         return jsonify({'success': False, 'message': message})
 
@@ -101,6 +109,42 @@ def setup_mfa():
         })
     else:
         return jsonify({'success': False, 'message': 'Failed to setup MFA'})
+
+@app.route('/api/verify_mfa', methods=['POST'])
+def verify_mfa():
+    """Verify MFA code"""
+    data = request.json
+    code = data.get('code')
+    
+    if not code:
+        return jsonify({'success': False, 'message': 'MFA code is required'})
+    
+    username = session.get('pending_username')
+    if not username:
+        return jsonify({'success': False, 'message': 'No pending MFA verification'})
+    
+    # Verify MFA code
+    if vault.verify_mfa(username, code):
+        # MFA verified - create session
+        success, token, message = vault.user_manager.create_session(username)
+        
+        if success:
+            session['username'] = username
+            session['token'] = token
+            session.pop('pending_username', None)
+            
+            # Log successful MFA login
+            vault.audit_logger.log(
+                event_type="mfa_login",
+                username=username,
+                success=True
+            )
+            
+            return jsonify({'success': True, 'message': 'Login successful', 'token': token})
+        else:
+            return jsonify({'success': False, 'message': 'Session creation failed'})
+    else:
+        return jsonify({'success': False, 'message': 'Invalid MFA code'})
 
 @app.route('/api/encrypt_file', methods=['POST'])
 def encrypt_file():

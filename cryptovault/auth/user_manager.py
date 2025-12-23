@@ -226,6 +226,44 @@ class UserManager:
         
         return (True, token, "Login successful")
     
+    def create_session(self, username: str) -> Tuple[bool, Optional[str], str]:
+        """
+        Create session for authenticated user (used after MFA verification).
+        
+        Args:
+            username: Username
+            
+        Returns:
+            Tuple of (success, session_token, message)
+        """
+        if username not in self.users:
+            return (False, None, "User not found")
+        
+        user = self.users[username]
+        
+        # Reset failed attempts
+        user.failed_login_attempts = 0
+        user.locked_until = 0.0
+        
+        # Generate session token using HMAC-SHA256
+        session_data = {
+            'username': username,
+            'created_at': time.time(),
+            'expires_at': time.time() + 3600  # 1 hour session
+        }
+        
+        # Create HMAC token
+        token_data = f"{username}:{session_data['created_at']}:{session_data['expires_at']}"
+        token = hmac.new(
+            self.session_secret,
+            token_data.encode('utf-8'),
+            hashlib.sha256
+        ).hexdigest()
+        
+        self.sessions[token] = session_data
+        
+        return (True, token, "Session created")
+    
     def verify_session(self, token: str) -> Tuple[bool, Optional[str]]:
         """
         Verify session token.

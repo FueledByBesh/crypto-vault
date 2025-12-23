@@ -3,6 +3,7 @@ CryptoVault - Main Integration Layer
 Connects all modules into a unified cryptographic security suite.
 """
 
+from math import log
 from typing import Optional, Tuple, Dict
 from cryptovault.auth.user_manager import UserManager
 from cryptovault.auth.mfa import MFA
@@ -51,7 +52,8 @@ class CryptoVault:
             Tuple of (success, message)
         """
         success, message = self.user_manager.register_user(username, password)
-        
+        print("Register user:", success, message)
+
         if success:
             # Log registration
             self.audit_logger.log(
@@ -59,6 +61,7 @@ class CryptoVault:
                 username=username,
                 success=True
             )
+            print("Audit log created for user registration.")
             
             # Create blockchain transaction
             tx = self.blockchain.create_transaction(
@@ -68,6 +71,7 @@ class CryptoVault:
             )
             self.blockchain.add_transaction(tx)
             self.blockchain.mine_pending_transactions()
+            print("Blockchain transaction created for user registration.")
         
         return (success, message)
     
