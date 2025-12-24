@@ -65,6 +65,7 @@ class UserManager:
         self.rate_limit_window = rate_limit_window
         self.max_attempts = max_attempts
         self.lockout_duration = lockout_duration
+        self.session_secret = secrets.token_bytes(32)  # Secret key for HMAC token generation
         
         # For persistence
         self.db = SimpleDatabase("data/users.json")
