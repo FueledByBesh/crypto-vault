@@ -438,6 +438,9 @@
           <button class="tab" onclick="showTab('blockchain')">
             ⛓️ Blockchain
           </button>
+          <button class="tab" onclick="showTab('messaging')">
+            💬 Messaging
+          </button>
         </div>
 
         <!-- Files Tab -->
@@ -796,6 +799,48 @@
             📋 Load Blockchain Logs
           </button>
           <div id="blockchainLogs" style="margin-top: 20px"></div>
+        </div>
+
+        <!-- Messaging Tab -->
+        <div id="messagingTab" class="tab-content">
+          <h2>Secure Messaging</h2>
+          <div class="info-box">
+            <h4>About Messaging:</h4>
+            <p>
+              Send encrypted messages to other registered users. Messages are
+              stored securely on the server.
+            </p>
+          </div>
+          <div class="grid">
+            <div>
+              <h3>📤 Send Message</h3>
+              <div class="message" id="sendMessageResult"></div>
+              <div class="form-group">
+                <label>To:</label>
+                <input
+                  type="text"
+                  id="messageTo"
+                  placeholder="Recipient username"
+                />
+              </div>
+              <div class="form-group">
+                <label>Message:</label>
+                <textarea
+                  id="messageText"
+                  placeholder="Enter your message"
+                  rows="4"
+                ></textarea>
+              </div>
+              <button class="btn" onclick="sendMessage()">Send Message</button>
+            </div>
+            <div>
+              <h3>📥 Inbox</h3>
+              <button class="btn" onclick="loadMessages()" id="loadMessagesBtn">
+                🔄 Refresh Messages
+              </button>
+              <div id="messagesList" style="margin-top: 20px"></div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1494,8 +1539,113 @@
           if (this.textContent.includes("Blockchain")) {
             setTimeout(loadBlockchainInfo, 100);
           }
+          if (this.textContent.includes("Messaging")) {
+            setTimeout(loadMessages, 100);
+          }
         });
       });
+
+      // Messaging functions
+      async function sendMessage() {
+        const to = document.getElementById("messageTo").value.trim();
+        const message = document.getElementById("messageText").value.trim();
+
+        if (!to || !message) {
+          showMessage(
+            "sendMessageResult",
+            "Fill in recipient and message",
+            "error"
+          );
+          return;
+        }
+
+        setLoading("sendMessage", true);
+        try {
+          const response = await fetch("/api/send_message", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ to_user: to, message: message }),
+          });
+
+          const data = await response.json();
+          showMessage(
+            "sendMessageResult",
+            data.message,
+            data.success ? "success" : "error"
+          );
+
+          if (data.success) {
+            document.getElementById("messageTo").value = "";
+            document.getElementById("messageText").value = "";
+            loadMessages(); // Refresh inbox
+          }
+        } catch (error) {
+          showMessage(
+            "sendMessageResult",
+            "Connection error: " + error.message,
+            "error"
+          );
+        } finally {
+          setLoading("sendMessage", false);
+        }
+      }
+
+      async function loadMessages() {
+        setLoading("loadMessagesBtn", true);
+        try {
+          const response = await fetch("/api/get_messages");
+          const data = await response.json();
+
+          if (data.success) {
+            const messagesDiv = document.getElementById("messagesList");
+            if (data.messages.length === 0) {
+              messagesDiv.innerHTML = "<p>No messages</p>";
+            } else {
+              let html = '<div style="max-height: 400px; overflow-y: auto;">';
+              const unreadIndices = [];
+
+              data.messages.forEach((msg, index) => {
+                const date = new Date(msg.timestamp * 1000).toLocaleString(
+                  "en-US"
+                );
+                const readClass = msg.read ? "read" : "unread";
+                if (!msg.read) unreadIndices.push(index);
+
+                html += `
+                  <div class="message-item ${readClass}" style="border: 1px solid #ddd; margin: 10px 0; padding: 10px; border-radius: 5px; background: ${
+                  msg.read ? "#f9f9f9" : "#e3f2fd"
+                }">
+                    <div><strong>From:</strong> ${msg.from}</div>
+                    <div><strong>Time:</strong> ${date}</div>
+                    <div><strong>Message:</strong> ${msg.message}</div>
+                  </div>
+                `;
+              });
+
+              html += "</div>";
+
+              if (unreadIndices.length > 0) {
+                // Mark as read
+                fetch("/api/mark_messages_read", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ indices: unreadIndices }),
+                });
+              }
+
+              messagesDiv.innerHTML = html;
+            }
+          } else {
+            document.getElementById("messagesList").innerHTML =
+              "<p>Error loading messages</p>";
+          }
+        } catch (error) {
+          document.getElementById("messagesList").innerHTML =
+            "<p>Connection error: " + error.message + "</p>";
+        } finally {
+          setLoading("loadMessagesBtn", false);
+        }
+      }
     </script>
   </body>
 </html>
