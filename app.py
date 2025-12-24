@@ -430,46 +430,6 @@ def audit_logs():
     logs = vault.get_recent_audit_logs(limit)
     return jsonify({'success': True, 'logs': logs})
 
-@app.route('/api/send_message', methods=['POST'])
-def send_message():
-    """Send message to another user"""
-    if not session.get('username'):
-        return jsonify({'success': False, 'message': 'Not logged in'})
-    
-    from_user = session.get('username')
-    data = request.json
-    to_user = data.get('to_user')
-    message = data.get('message')
-    
-    if not to_user or not message:
-        return jsonify({'success': False, 'message': 'Recipient and message are required'})
-    
-    success, msg = vault.send_message(from_user, to_user, message)
-    return jsonify({'success': success, 'message': msg})
-
-@app.route('/api/get_messages', methods=['GET'])
-def get_messages():
-    """Get messages for current user"""
-    if not session.get('username'):
-        return jsonify({'success': False, 'message': 'Not logged in'})
-    
-    username = session.get('username')
-    messages = vault.get_messages(username)
-    return jsonify({'success': True, 'messages': messages})
-
-@app.route('/api/mark_messages_read', methods=['POST'])
-def mark_messages_read():
-    """Mark messages as read"""
-    if not session.get('username'):
-        return jsonify({'success': False, 'message': 'Not logged in'})
-    
-    username = session.get('username')
-    data = request.json
-    indices = data.get('indices', [])
-    
-    vault.mark_messages_read(username, indices)
-    return jsonify({'success': True, 'message': 'Messages marked as read'})
-
 if __name__ == '__main__':
     # Create templates folder
     os.makedirs('templates', exist_ok=True)

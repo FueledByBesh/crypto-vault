@@ -4,10 +4,7 @@ Connects all modules into a unified cryptographic security suite.
 """
 
 from math import log
-from typing import Optional, Tuple, Dict, List
-import json
-import os
-import time
+from typing import Optional, Tuple, Dict
 from cryptovault.auth.user_manager import UserManager
 from cryptovault.auth.mfa import MFA
 from cryptovault.messaging.secure_messenger import SecureMessenger
@@ -34,73 +31,9 @@ class CryptoVault:
         self.mfa = MFA()
         self.audit_logger = AuditLogger(audit_log_file)
         self.blockchain = Blockchain(blockchain_difficulty)
-        self.blockchain.load_from_file()  # Load existing blockchain
-        
-        # Load users and messages
-        self.load_data()
-    
-    def load_data(self):
-        """Load persistent data."""
-        # Users are loaded in UserManager.__init__
-        self.load_messages()
-    
-    def save_data(self):
-        """Save persistent data."""
-        # Users are saved in UserManager
-        self.save_messages()
-    
-    def save_messages(self):
-        """Save messages to encrypted file."""
-        try:
-            json_data = json.dumps(self.messages).encode('utf-8')
-            
-            temp_file = "temp_messages.json"
-            with open(temp_file, 'wb') as f:
-                f.write(json_data)
-            
-            # Use file_encryptor from user_manager
-            self.user_manager.file_encryptor.encrypt_file(
-                self.user_manager.master_password, temp_file, "messages.enc"
-            )
-            
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-        except Exception as e:
-            print(f"Error saving messages: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-    
-    def load_messages(self):
-        """Load messages from encrypted file."""
-        messages_file = "messages.enc"
-        if not os.path.exists(messages_file):
-            return
-        
-        temp_file = "temp_messages_decrypted.json"
-        try:
-            self.user_manager.file_encryptor.decrypt_file(
-                self.user_manager.master_password, messages_file, temp_file
-            )
-            
-            with open(temp_file, 'rb') as f:
-                data = f.read().decode('utf-8')
-                self.messages = json.loads(data)
-            
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
-        except Exception as e:
-            print(f"Error loading messages: {e}")
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
         
         # Per-user messaging sessions
         self.messaging_sessions: Dict[str, SecureMessenger] = {}
-        
-        # Messages storage: {username: [messages]}
-        self.messages: Dict[str, List[Dict]] = {}
-        
-        # Messages storage: {username: [messages]}
-        self.messages: Dict[str, List[Dict]] = {}
         
         # Per-user file encryptors (keyed by username)
         self.file_encryptors: Dict[str, FileEncryptor] = {}
@@ -458,78 +391,4 @@ class CryptoVault:
     def get_recent_audit_logs(self, limit: int = 100) -> list:
         """Get recent audit log entries."""
         return self.audit_logger.get_recent_logs(limit)
-    
-    # ==================== Messaging ====================
-    
-    def send_message(self, from_user: str, to_user: str, message: str) -> Tuple[bool, str]:
-        """
-        Send message from one user to another.
-        
-        Args:
-            from_user: Sender username
-            to_user: Receiver username
-            message: Message content
-            
-        Returns:
-            Tuple of (success, message)
-        """
-        if to_user not in self.user_manager.users:
-            return (False, "Recipient not found")
-        
-        if from_user not in self.user_manager.users:
-            return (False, "Sender not authenticated")
-        
-        # Initialize messages list if not exists
-        if to_user not in self.messages:
-            self.messages[to_user] = []
-        
-        # Add message
-        msg_data = {
-            'from': from_user,
-            'to': to_user,
-            'message': message,
-            'timestamp': time.time(),
-            'read': False
-        }
-        self.messages[to_user].append(msg_data)
-        
-        # Save messages
-        self.save_messages()
-        
-        # Log to blockchain
-        tx = self.blockchain.create_transaction(
-            action="send_message",
-            user=from_user,
-            data=f"Message sent to {to_user}"
-        )
-        self.blockchain.add_transaction(tx)
-        self.blockchain.mine_pending_transactions()
-        
-        return (True, "Message sent successfully")
-    
-    def get_messages(self, username: str) -> List[Dict]:
-        """
-        Get messages for user.
-        
-        Args:
-            username: Username
-            
-        Returns:
-            List of messages
-        """
-        return self.messages.get(username, [])
-    
-    def mark_messages_read(self, username: str, message_indices: List[int]):
-        """
-        Mark messages as read.
-        
-        Args:
-            username: Username
-            message_indices: List of message indices to mark as read
-        """
-        if username in self.messages:
-            for idx in message_indices:
-                if 0 <= idx < len(self.messages[username]):
-                    self.messages[username][idx]['read'] = True
-            self.save_messages()
 

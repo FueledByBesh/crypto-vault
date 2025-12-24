@@ -9,8 +9,6 @@ from cryptovault.blockchain.block import Block, Transaction
 from cryptovault.blockchain.proof_of_work import ProofOfWork
 from cryptovault.core.merkle_tree import MerkleTree
 from cryptovault.core.sha256_simplified import SHA256Simplified
-import json
-import os
 
 
 class Blockchain:
@@ -90,9 +88,6 @@ class Blockchain:
         
         # Clear pending transactions
         self.pending_transactions = []
-        
-        # Save blockchain to file
-        self.save_to_file()
         
         return new_block
     
@@ -274,47 +269,4 @@ class Blockchain:
         )
         
         return transaction
-    
-    def save_to_file(self, filename: str = "blockchain.json"):
-        """Save blockchain to file."""
-        data = {
-            'chain': [block.to_dict() for block in self.chain],
-            'pending_transactions': [tx.to_dict() for tx in self.pending_transactions],
-            'difficulty': self.proof_of_work.difficulty
-        }
-        with open(filename, 'w') as f:
-            json.dump(data, f, indent=2)
-    
-    def load_from_file(self, filename: str = "blockchain.json"):
-        """Load blockchain from file."""
-        if not os.path.exists(filename):
-            return
-        with open(filename, 'r') as f:
-            data = json.load(f)
-        
-        # Load chain
-        self.chain = []
-        for block_data in data['chain']:
-            transactions = []
-            for tx_data in block_data['transactions']:
-                tx = Transaction(**tx_data)
-                transactions.append(tx)
-            block = Block(
-                index=block_data['index'],
-                timestamp=block_data['timestamp'],
-                previous_hash=block_data['previous_hash'],
-                nonce=block_data['nonce'],
-                merkle_root=block_data['merkle_root'],
-                transactions=transactions
-            )
-            self.chain.append(block)
-        
-        # Load pending transactions
-        self.pending_transactions = []
-        for tx_data in data['pending_transactions']:
-            tx = Transaction(**tx_data)
-            self.pending_transactions.append(tx)
-        
-        # Load difficulty
-        self.proof_of_work.difficulty = data.get('difficulty', 4)
 
