@@ -417,6 +417,12 @@ def blockchain_info():
     info = vault.get_blockchain_info()
     return jsonify({'success': True, 'info': info})
 
+@app.route('/api/blockchain_logs', methods=['GET'])
+def blockchain_logs():
+    """Get blockchain logs"""
+    logs = vault.get_blockchain_logs()
+    return jsonify({'success': True, 'logs': logs})
+
 @app.route('/api/audit_logs', methods=['GET'])
 def audit_logs():
     """Get audit logs"""

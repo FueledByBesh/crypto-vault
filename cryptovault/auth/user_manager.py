@@ -10,6 +10,9 @@ import hashlib
 from typing import Optional, Dict, Tuple
 from dataclasses import dataclass, field
 from cryptovault.auth.password_validator import PasswordValidator
+from cryptovault.file_encryption.file_encryptor import FileEncryptor
+import json
+import os
 
 try:
     import argon2
@@ -63,8 +66,16 @@ class UserManager:
         self.max_attempts = max_attempts
         self.lockout_duration = lockout_duration
         
+        # For persistence
+        self.file_encryptor = FileEncryptor()
+        self.users_file = "users.enc"
+        self.master_password = "cryptovault_master_key_2024"  # Fixed master password for users file
+        
         # Session secret for HMAC (should be loaded from secure config in production)
         self.session_secret = secrets.token_bytes(32)
+        
+        # Load existing users
+        self.load_users()
     
     def register_user(self, username: str, password: str) -> Tuple[bool, str]:
         """
@@ -107,6 +118,7 @@ class UserManager:
             created_at=time.time()
         )
         self.users[username] = user
+        self.save_users()
         
         return (True, "User registered successfully")
     
@@ -325,5 +337,79 @@ class UserManager:
         user.totp_secret = totp_secret
         user.backup_codes = {code: False for code in backup_codes}
         user.mfa_enabled = True
+        self.save_users()
         return True
+    
+    def save_users(self):
+        """Save users to encrypted file."""
+        try:
+            users_data = {}
+            for username, user in self.users.items():
+                users_data[username] = {
+                    'username': user.username,
+                    'password_hash': user.password_hash,
+                    'salt': user.salt.hex(),
+                    'created_at': user.created_at,
+                    'failed_login_attempts': user.failed_login_attempts,
+                    'last_failed_login': user.last_failed_login,
+                    'locked_until': user.locked_until,
+                    'totp_secret': user.totp_secret,
+                    'backup_codes': user.backup_codes,
+                    'mfa_enabled': user.mfa_enabled
+                }
+            
+            json_data = json.dumps(users_data, indent=2).encode('utf-8')
+            
+            # Write to temp file, encrypt, then save
+            temp_file = "temp_users.json"
+            with open(temp_file, 'wb') as f:
+                f.write(json_data)
+            
+            self.file_encryptor.encrypt_file(self.master_password, temp_file, self.users_file)
+            
+            # Remove temp file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        except Exception as e:
+            print(f"Error saving users: {e}")
+            # Clean up temp file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+    
+    def load_users(self):
+        """Load users from encrypted file."""
+        if not os.path.exists(self.users_file):
+            return
+        
+        temp_file = "temp_users_decrypted.json"
+        try:
+            self.file_encryptor.decrypt_file(self.master_password, self.users_file, temp_file)
+            
+            with open(temp_file, 'rb') as f:
+                data = f.read().decode('utf-8')
+                users_data = json.loads(data)
+            
+            for username, data in users_data.items():
+                user = User(
+                    username=data['username'],
+                    password_hash=data['password_hash'],
+                    salt=bytes.fromhex(data['salt']),
+                    created_at=data['created_at'],
+                    failed_login_attempts=data['failed_login_attempts'],
+                    last_failed_login=data['last_failed_login'],
+                    locked_until=data['locked_until'],
+                    totp_secret=data['totp_secret'],
+                    backup_codes=data['backup_codes'],
+                    mfa_enabled=data['mfa_enabled']
+                )
+                self.users[username] = user
+            
+            # Remove temp file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
+        except Exception as e:
+            print(f"Error loading users: {e}")
+            # Clean up temp file
+            if os.path.exists(temp_file):
+                os.remove(temp_file)
 

@@ -1,0 +1,105 @@
+{
+  "chain": [
+    {
+      "index": 0,
+      "timestamp": 1766574886.4010859,
+      "previous_hash": "0000000000000000000000000000000000000000000000000000000000000000",
+      "nonce": 0,
+      "merkle_root": "2e1cfa82b035c26cbbbdae632cea070514eb8b773f616aaeaf668e2f0be8f10d",
+      "transactions": [],
+      "hash": "b2ac974fbff7da60b41dad294cb57e3d0e047fc505c420d7169bef228f38b9ad"
+    },
+    {
+      "index": 1,
+      "timestamp": 1766574937.863907,
+      "previous_hash": "b2ac974fbff7da60b41dad294cb57e3d0e047fc505c420d7169bef228f38b9ad",
+      "nonce": 79,
+      "merkle_root": "bbe5cc83729ee16467c2a7e9d6adf8667405a796397b303140f1a1b7a483b682",
+      "transactions": [
+        {
+          "action": "user_registration",
+          "user": "olzhas",
+          "timestamp": 1766574937.863892,
+          "data_hash": "f5f9fc00dd44d2a3359083369123182394a208fe3f5952b5e08c262717352b5b",
+          "metadata": {}
+        }
+      ],
+      "hash": "00cc9c9f405157adb2978d511a772e5727e3907b4421972f02ec2c3eda203aa4"
+    },
+    {
+      "index": 2,
+      "timestamp": 1766574946.93082,
+      "previous_hash": "00cc9c9f405157adb2978d511a772e5727e3907b4421972f02ec2c3eda203aa4",
+      "nonce": 518,
+      "merkle_root": "a5d53090acac7e78b5c14a6f67b2dac63c079e82afd7b8129519787de1822c9b",
+      "transactions": [
+        {
+          "action": "login",
+          "user": "olzhas",
+          "timestamp": 1766574946.930814,
+          "data_hash": "edea67adc9c0dbdb3aef6547a11aaaf92f2d8ead33ce9dd496946dc77daa8097",
+          "metadata": {}
+        }
+      ],
+      "hash": "00a9e0b8f09931e4926981d467284ef19db438e2e1d84ac781dbe994acc4b80b"
+    },
+    {
+      "index": 3,
+      "timestamp": 1766575050.7763221,
+      "previous_hash": "00a9e0b8f09931e4926981d467284ef19db438e2e1d84ac781dbe994acc4b80b",
+      "nonce": 141,
+      "merkle_root": "e70009b32c00b1a358a259569b543350b4cd5a9197eaa23bcda5bba788b36201",
+      "transactions": [
+        {
+          "action": "file_encrypt",
+          "user": "olzhas",
+          "timestamp": 1766575050.7762969,
+          "data_hash": "bb83892ccc2584a9624c582333b5e69faacb2881e28c511b75fd278510cee363",
+          "metadata": {
+            "algorithm": "ChaCha20-Poly1305",
+            "file_hash": "14e7f51e9339a77bc2944576cdccabcee55633058cbb86673f8d1e789fd64843"
+          }
+        }
+      ],
+      "hash": "00610348d0b6fd4fa2df8fc8488448bda6e100076fca3ecd70ebf3fd5d280394"
+    },
+    {
+      "index": 4,
+      "timestamp": 1766575066.2644212,
+      "previous_hash": "00610348d0b6fd4fa2df8fc8488448bda6e100076fca3ecd70ebf3fd5d280394",
+      "nonce": 205,
+      "merkle_root": "2746f6a374e53f622d1d8df8ede59cb7e7a1d900e266ea9e30db81a800a9074c",
+      "transactions": [
+        {
+          "action": "file_decrypt",
+          "user": "olzhas",
+          "timestamp": 1766575066.264392,
+          "data_hash": "75d202042b812d1b3eed56a9b2fd1efb5ae26063fde6841b9f0d6f53eb55e3d9",
+          "metadata": {
+            "integrity_verified": true
+          }
+        }
+      ],
+      "hash": "0093fbc76d6439242b78d68c5e7aade833a033b37e772f42c9586faefe7dfd5b"
+    },
+    {
+      "index": 5,
+      "timestamp": 1766575117.319135,
+      "previous_hash": "0093fbc76d6439242b78d68c5e7aade833a033b37e772f42c9586faefe7dfd5b",
+      "nonce": 242,
+      "merkle_root": "1d46feb257a5796eb23be709ae88b65b8766e671c1170485eeeb92522745ac6b",
+      "transactions": [
+        {
+          "action": "login",
+          "user": "olzhas",
+          "timestamp": 1766575117.3191218,
+          "data_hash": "edea67adc9c0dbdb3aef6547a11aaaf92f2d8ead33ce9dd496946dc77daa8097",
+          "metadata": {}
+        }
+      ],
+      "hash": "00cda3e66dfb577087be46adeebf606ab15620b1710faafb8bb5e4281725d223"
+    }
+  ],
+  "pending_transactions": [],
+  "difficulty": 2
+}

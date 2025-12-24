@@ -18,7 +18,7 @@ class CryptoVault:
     Main CryptoVault system integrating all modules.
     """
     
-    def __init__(self, audit_log_file: str = "audit.log", blockchain_difficulty: int = 4):
+    def __init__(self, audit_log_file: str = "audit.log", blockchain_difficulty: int = 2):
         """
         Initialize CryptoVault system.
         
@@ -31,6 +31,7 @@ class CryptoVault:
         self.mfa = MFA()
         self.audit_logger = AuditLogger(audit_log_file)
         self.blockchain = Blockchain(blockchain_difficulty)
+        self.blockchain.load_from_file()  # Load existing blockchain
         
         # Per-user messaging sessions
         self.messaging_sessions: Dict[str, SecureMessenger] = {}
@@ -379,6 +380,10 @@ class CryptoVault:
     def get_blockchain_info(self) -> Dict:
         """Get blockchain information."""
         return self.blockchain.get_chain_info()
+    
+    def get_blockchain_logs(self) -> list:
+        """Get blockchain logs (all blocks with transactions)."""
+        return self.blockchain.get_chain_logs()
     
     def validate_blockchain(self) -> Tuple[bool, Optional[str]]:
         """Validate blockchain integrity."""

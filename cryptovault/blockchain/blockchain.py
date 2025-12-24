@@ -9,6 +9,8 @@ from cryptovault.blockchain.block import Block, Transaction
 from cryptovault.blockchain.proof_of_work import ProofOfWork
 from cryptovault.core.merkle_tree import MerkleTree
 from cryptovault.core.sha256_simplified import SHA256Simplified
+import json
+import os
 
 
 class Blockchain:
@@ -88,6 +90,9 @@ class Blockchain:
         
         # Clear pending transactions
         self.pending_transactions = []
+        
+        # Save blockchain to file
+        self.save_to_file()
         
         return new_block
     
@@ -212,6 +217,37 @@ class Blockchain:
             'is_valid': self.validate_chain()[0]
         }
     
+    def get_chain_logs(self) -> list:
+        """
+        Get blockchain logs (all blocks with their transactions).
+        
+        Returns:
+            List of dictionaries representing blocks and their transactions
+        """
+        logs = []
+        for block in self.chain:
+            block_data = {
+                'index': block.index,
+                'timestamp': block.timestamp,
+                'previous_hash': block.previous_hash,
+                'hash': block.hash(),
+                'nonce': block.nonce,
+                'merkle_root': block.merkle_root,
+                'transactions': []
+            }
+            for tx in block.transactions:
+                tx_data = {
+                    'action': tx.action,
+                    'user': tx.user,
+                    'timestamp': tx.timestamp,
+                    'data_hash': tx.data_hash,
+                    'hash': tx.hash().hex(),
+                    'metadata': tx.metadata
+                }
+                block_data['transactions'].append(tx_data)
+            logs.append(block_data)
+        return logs
+    
     def create_transaction(self, action: str, user: str, data: str,
                           metadata: Optional[dict] = None) -> Transaction:
         """
@@ -238,4 +274,47 @@ class Blockchain:
         )
         
         return transaction
+    
+    def save_to_file(self, filename: str = "blockchain.json"):
+        """Save blockchain to file."""
+        data = {
+            'chain': [block.to_dict() for block in self.chain],
+            'pending_transactions': [tx.to_dict() for tx in self.pending_transactions],
+            'difficulty': self.proof_of_work.difficulty
+        }
+        with open(filename, 'w') as f:
+            json.dump(data, f, indent=2)
+    
+    def load_from_file(self, filename: str = "blockchain.json"):
+        """Load blockchain from file."""
+        if not os.path.exists(filename):
+            return
+        with open(filename, 'r') as f:
+            data = json.load(f)
+        
+        # Load chain
+        self.chain = []
+        for block_data in data['chain']:
+            transactions = []
+            for tx_data in block_data['transactions']:
+                tx = Transaction(**tx_data)
+                transactions.append(tx)
+            block = Block(
+                index=block_data['index'],
+                timestamp=block_data['timestamp'],
+                previous_hash=block_data['previous_hash'],
+                nonce=block_data['nonce'],
+                merkle_root=block_data['merkle_root'],
+                transactions=transactions
+            )
+            self.chain.append(block)
+        
+        # Load pending transactions
+        self.pending_transactions = []
+        for tx_data in data['pending_transactions']:
+            tx = Transaction(**tx_data)
+            self.pending_transactions.append(tx)
+        
+        # Load difficulty
+        self.proof_of_work.difficulty = data.get('difficulty', 4)
 
