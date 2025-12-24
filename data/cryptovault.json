@@ -1,0 +1,19 @@
+{
+  "messages": {
+    "dontshit": [],
+    "olzhas": [
+      {
+        "sender": "dontshit",
+        "encrypted_message": "3a6f5459aa6ab052bec9043118ab730069976184cfcf75fe1f0d80287d6df4acfc98",
+        "signature": "3045022100800c3d5efdf80abe0b03b867ae86545a2976e567e7ae204618bf311f4c68e8d702201ebe781e255ebb2e982444bfced35add2346f4cfb561ac54b28ca0c5c686fd29",
+        "timestamp": 1766605746.934029
+      },
+      {
+        "sender": "dontshit",
+        "encrypted_message": "b39c1e3fdcc98936b4f57b7beb2548ac65c632378881077172145b84d9158af04e15482f71",
+        "signature": "30450220590944adf2e40b2d4fcfeb9653d248787f6b526d4fe609ad930429c728ce0baa022100f4cecde3e46dedf26d28580727642ece44218805fa020fdf32162c8151532616",
+        "timestamp": 1766605757.700673
+      }
+    ]
+  }
+}

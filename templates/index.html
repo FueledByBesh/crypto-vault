@@ -1018,6 +1018,7 @@
             } else {
               // No MFA required
               document.getElementById("usernameDisplay").textContent = username;
+              sessionStorage.setItem("username", username);
               document.getElementById("authSection").classList.remove("active");
               document.getElementById("mainSection").classList.add("active");
               document.getElementById("loginUsername").value = "";
@@ -1067,6 +1068,7 @@
               .getElementById("loginUsername")
               .value.trim();
             document.getElementById("usernameDisplay").textContent = username;
+            sessionStorage.setItem("username", username);
             document.getElementById("authSection").classList.remove("active");
             document.getElementById("mainSection").classList.add("active");
             // Reset form
@@ -1615,6 +1617,56 @@
         }
       }
 
+      async function initializeMessaging() {
+        // Get current user's public key from session
+        const currentUsername = sessionStorage.getItem("username");
+
+        if (!currentUsername) {
+          showMessage(
+            "messagingMessage",
+            "Error: User not authenticated",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          showMessage(
+            "messagingMessage",
+            "Initializing messaging...",
+            "success"
+          );
+
+          // Fetch your public key from the server
+          const response = await fetch(
+            `/api/messaging/public_key/${currentUsername}`
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            // Display your public key in the textarea
+            document.getElementById("myPublicKey").value = data.public_key;
+            showMessage(
+              "messagingMessage",
+              "✅ Your public key initialized! Share it with your peer.",
+              "success"
+            );
+          } else {
+            showMessage(
+              "messagingMessage",
+              "Failed to initialize: " + data.message,
+              "error"
+            );
+          }
+        } catch (error) {
+          showMessage(
+            "messagingMessage",
+            "Error initializing messaging: " + error.message,
+            "error"
+          );
+        }
+      }
+
       async function selectUser() {
         const select = document.getElementById("userSelect");
         selectedUser = select.value;
@@ -1626,46 +1678,51 @@
 
         document.getElementById("chatUser").textContent = selectedUser;
         document.getElementById("chatArea").style.display = "block";
+        document.getElementById("messageArea").style.display = "none";
         document.getElementById("messages").innerHTML = "";
+        document.getElementById("peerPublicKey").value = "";
         sessionEstablished = false;
 
-        // Establish session with selected user
-        await establishSession();
+        showMessage(
+          "messagingMessage",
+          "📋 Selected " +
+            selectedUser +
+            ". Now paste their public key and click 'Establish Session'.",
+          "success"
+        );
       }
 
       async function establishSession() {
-        if (!selectedUser) return;
-
-        try {
-          // First, get peer's public key (this is a simplification - in real app,
-          // users would exchange keys out-of-band or through a server)
+        if (!selectedUser) {
           showMessage(
             "messagingMessage",
-            "Establishing secure session...",
+            "Please select a user first.",
+            "error"
+          );
+          return;
+        }
+
+        const peerPublicKeyInput = document
+          .getElementById("peerPublicKey")
+          .value.trim();
+
+        if (!peerPublicKeyInput) {
+          showMessage(
+            "messagingMessage",
+            "❌ Error: Paste your peer's public key first!",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          showMessage(
+            "messagingMessage",
+            "🔐 Establishing secure session with " + selectedUser + "...",
             "success"
           );
 
-          // For demo purposes, we'll assume the peer's public key is available
-          // In a real implementation, you'd need to get it from the peer
-          const peerKeyResponse = await fetch(
-            `/api/messaging/public_key/${selectedUser}`
-          );
-          if (!peerKeyResponse.ok) {
-            showMessage(
-              "messagingMessage",
-              "Cannot get peer's public key. Session establishment failed.",
-              "error"
-            );
-            return;
-          }
-
-          const peerKeyData = await peerKeyResponse.json();
-          if (!peerKeyData.success) {
-            showMessage("messagingMessage", peerKeyData.message, "error");
-            return;
-          }
-
-          // Establish session
+          // Establish session with the pasted peer's public key
           const establishResponse = await fetch(
             "/api/messaging/establish_session",
             {
@@ -1673,7 +1730,7 @@
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 peer_username: selectedUser,
-                peer_public_key: peerKeyData.public_key,
+                peer_public_key: peerPublicKeyInput,
               }),
             }
           );
@@ -1681,22 +1738,26 @@
           const establishData = await establishResponse.json();
           if (establishData.success) {
             sessionEstablished = true;
+            document.getElementById("messageArea").style.display = "block";
+            document.getElementById("messageInput").focus();
             showMessage(
               "messagingMessage",
-              "Secure session established! You can now send messages.",
+              "✅ Secure session established! You can now send messages to " +
+                selectedUser +
+                ".",
               "success"
             );
           } else {
             showMessage(
               "messagingMessage",
-              "Failed to establish session: " + establishData.message,
+              "❌ Failed to establish session: " + establishData.message,
               "error"
             );
           }
         } catch (error) {
           showMessage(
             "messagingMessage",
-            "Error establishing session: " + error.message,
+            "❌ Error establishing session: " + error.message,
             "error"
           );
         }

@@ -4,6 +4,8 @@ Complete blockchain implementation with validation and integrity checks.
 """
 
 import time
+import json
+import os
 from typing import List, Optional, Tuple
 from cryptovault.blockchain.block import Block, Transaction
 from cryptovault.blockchain.proof_of_work import ProofOfWork
@@ -14,22 +16,25 @@ from cryptovault.core.sha256_simplified import SHA256Simplified
 class Blockchain:
     """
     Blockchain audit ledger for security events.
-    Provides immutable audit trail.
+    Provides immutable audit trail with file persistence.
     """
     
-    def __init__(self, difficulty: int = 4):
+    def __init__(self, difficulty: int = 4, blockchain_file: str = "blockchain.json"):
         """
         Initialize blockchain.
         
         Args:
             difficulty: Proof of Work difficulty
+            blockchain_file: Path to blockchain persistence file
         """
         self.chain: List[Block] = []
         self.pending_transactions: List[Transaction] = []
         self.proof_of_work = ProofOfWork(difficulty)
+        self.blockchain_file = blockchain_file
         
-        # Create genesis block
-        self._create_genesis_block()
+        # Try to load from file, otherwise create genesis block
+        if not self.load_from_file():
+            self._create_genesis_block()
     
     def _create_genesis_block(self):
         """Create the first block (genesis block)."""
@@ -43,6 +48,98 @@ class Blockchain:
         )
         genesis.merkle_root = genesis.calculate_merkle_root()
         self.chain.append(genesis)
+        self.save_to_file()
+    
+    def save_to_file(self) -> bool:
+        """
+        Save blockchain to JSON file.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            blockchain_data = {
+                'chain': [block.to_dict() for block in self.chain],
+                'difficulty': self.proof_of_work.difficulty,
+                'pending_transactions': [
+                    {
+                        'action': tx.action,
+                        'user': tx.user,
+                        'timestamp': tx.timestamp,
+                        'data_hash': tx.data_hash,
+                        'metadata': tx.metadata
+                    }
+                    for tx in self.pending_transactions
+                ]
+            }
+            
+            with open(self.blockchain_file, 'w') as f:
+                json.dump(blockchain_data, f, indent=2)
+            return True
+        except Exception as e:
+            print(f"Error saving blockchain: {e}")
+            return False
+    
+    def load_from_file(self) -> bool:
+        """
+        Load blockchain from JSON file.
+        
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            if not os.path.exists(self.blockchain_file):
+                return False
+            
+            with open(self.blockchain_file, 'r') as f:
+                blockchain_data = json.load(f)
+            
+            # Load difficulty
+            if 'difficulty' in blockchain_data:
+                self.proof_of_work.difficulty = blockchain_data['difficulty']
+            
+            # Load chain
+            for block_data in blockchain_data.get('chain', []):
+                # Reconstruct transactions
+                transactions = []
+                for tx_data in block_data.get('transactions', []):
+                    tx = Transaction(
+                        action=tx_data['action'],
+                        user=tx_data['user'],
+                        timestamp=tx_data['timestamp'],
+                        data_hash=tx_data['data_hash'],
+                        metadata=tx_data.get('metadata', {})
+                    )
+                    transactions.append(tx)
+                
+                # Reconstruct block
+                block = Block(
+                    index=block_data['index'],
+                    timestamp=block_data['timestamp'],
+                    previous_hash=block_data['previous_hash'],
+                    nonce=block_data['nonce'],
+                    merkle_root=block_data['merkle_root'],
+                    transactions=transactions
+                )
+                self.chain.append(block)
+            
+            # Load pending transactions
+            for tx_data in blockchain_data.get('pending_transactions', []):
+                tx = Transaction(
+                    action=tx_data['action'],
+                    user=tx_data['user'],
+                    timestamp=tx_data['timestamp'],
+                    data_hash=tx_data['data_hash'],
+                    metadata=tx_data.get('metadata', {})
+                )
+                self.pending_transactions.append(tx)
+            
+            print(f"Blockchain loaded from {self.blockchain_file}")
+            return True
+        except Exception as e:
+            print(f"Error loading blockchain: {e}")
+            return False
+
     
     def get_latest_block(self) -> Block:
         """Get the most recent block."""
@@ -88,6 +185,9 @@ class Blockchain:
         
         # Clear pending transactions
         self.pending_transactions = []
+        
+        # Save blockchain to file
+        self.save_to_file()
         
         return new_block
     

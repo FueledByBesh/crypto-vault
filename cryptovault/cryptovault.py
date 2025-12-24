@@ -20,19 +20,20 @@ class CryptoVault:
     Main CryptoVault system integrating all modules.
     """
     
-    def __init__(self, audit_log_file: str = "audit.log", blockchain_difficulty: int = 2):
+    def __init__(self, audit_log_file: str = "audit.log", blockchain_difficulty: int = 2, blockchain_file: str = "blockchain.json"):
         """
         Initialize CryptoVault system.
         
         Args:
             audit_log_file: Path to audit log file
             blockchain_difficulty: Blockchain PoW difficulty
+            blockchain_file: Path to blockchain persistence file
         """
         # Initialize modules
         self.user_manager = UserManager()
         self.mfa = MFA()
         self.audit_logger = AuditLogger(audit_log_file)
-        self.blockchain = Blockchain(blockchain_difficulty)
+        self.blockchain = Blockchain(blockchain_difficulty, blockchain_file)
         
         # Database for persistence
         self.db = SimpleDatabase("data/cryptovault.json")
