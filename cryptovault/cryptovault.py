@@ -99,6 +99,9 @@ class CryptoVault:
         # Messages storage: {username: [messages]}
         self.messages: Dict[str, List[Dict]] = {}
         
+        # Messages storage: {username: [messages]}
+        self.messages: Dict[str, List[Dict]] = {}
+        
         # Per-user file encryptors (keyed by username)
         self.file_encryptors: Dict[str, FileEncryptor] = {}
     

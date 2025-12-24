@@ -13,7 +13,7 @@ from cryptovault.auth.password_validator import PasswordValidator
 from cryptovault.file_encryption.file_encryptor import FileEncryptor
 import json
 import os
-
+BCRYPT_AVAILABLE = False
 try:
     import argon2
     ARGON2_AVAILABLE = True
