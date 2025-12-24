@@ -430,6 +430,129 @@ def audit_logs():
     logs = vault.get_recent_audit_logs(limit)
     return jsonify({'success': True, 'logs': logs})
 
+# ==================== Secure Messaging ====================
+
+@app.route('/api/messaging/users', methods=['GET'])
+def get_messaging_users():
+    """Get list of users for messaging"""
+    token = session.get('token')
+    username = session.get('username')
+    
+    if not token or not username:
+        return jsonify({'success': False, 'message': 'Authentication required'})
+    
+    is_valid, verified_username = vault.verify_session(token)
+    if not is_valid or verified_username != username:
+        return jsonify({'success': False, 'message': 'Invalid session'})
+    
+    users = vault.get_users_for_messaging(username)
+    return jsonify({'success': True, 'users': users})
+
+@app.route('/api/messaging/public_key/<username>', methods=['GET'])
+def get_user_messaging_public_key(username):
+    """Get a user's messaging public key"""
+    token = session.get('token')
+    current_username = session.get('username')
+    
+    if not token or not current_username:
+        return jsonify({'success': False, 'message': 'Authentication required'})
+    
+    is_valid, verified_username = vault.verify_session(token)
+    if not is_valid or verified_username != current_username:
+        return jsonify({'success': False, 'message': 'Invalid session'})
+    
+    try:
+        public_key = vault.initialize_messaging(username)
+        public_key_b64 = base64.b64encode(public_key).decode('utf-8')
+        return jsonify({'success': True, 'public_key': public_key_b64})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/messaging/establish_session', methods=['POST'])
+def establish_messaging_session():
+    """Establish messaging session with peer"""
+    token = session.get('token')
+    username = session.get('username')
+    
+    if not token or not username:
+        return jsonify({'success': False, 'message': 'Authentication required'})
+    
+    is_valid, verified_username = vault.verify_session(token)
+    if not is_valid or verified_username != username:
+        return jsonify({'success': False, 'message': 'Invalid session'})
+    
+    data = request.json
+    peer_public_key_b64 = data.get('peer_public_key')
+    
+    if not peer_public_key_b64:
+        return jsonify({'success': False, 'message': 'Peer public key required'})
+    
+    try:
+        peer_public_key = base64.b64decode(peer_public_key_b64)
+        
+        our_public_key = vault.establish_messaging_session(username, peer_public_key)
+        
+        response = {'success': True, 'our_public_key': base64.b64encode(our_public_key).decode('utf-8')}
+        
+        return jsonify(response)
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/messaging/send', methods=['POST'])
+def send_message():
+    """Send message to peer"""
+    token = session.get('token')
+    username = session.get('username')
+    
+    if not token or not username:
+        return jsonify({'success': False, 'message': 'Authentication required'})
+    
+    is_valid, verified_username = vault.verify_session(token)
+    if not is_valid or verified_username != username:
+        return jsonify({'success': False, 'message': 'Invalid session'})
+    
+    data = request.json
+    receiver_username = data.get('receiver')
+    message = data.get('message')
+    sign = data.get('sign', True)
+    
+    if not receiver_username or not message:
+        return jsonify({'success': False, 'message': 'Receiver and message required'})
+    
+    try:
+        success = vault.send_message(username, receiver_username, message, sign)
+        return jsonify({'success': success})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
+@app.route('/api/messaging/receive', methods=['GET'])
+def receive_messages():
+    """Get pending messages"""
+    token = session.get('token')
+    username = session.get('username')
+    
+    if not token or not username:
+        return jsonify({'success': False, 'message': 'Authentication required'})
+    
+    is_valid, verified_username = vault.verify_session(token)
+    if not is_valid or verified_username != username:
+        return jsonify({'success': False, 'message': 'Invalid session'})
+    
+    try:
+        messages = vault.get_messages(username)
+        # Convert to dict format
+        message_list = []
+        for sender, msg, sig_valid, timestamp in messages:
+            message_list.append({
+                'sender': sender,
+                'message': msg,
+                'signature_valid': sig_valid,
+                'timestamp': timestamp
+            })
+        return jsonify({'success': True, 'messages': message_list})
+    except Exception as e:
+        return jsonify({'success': False, 'message': str(e)})
+
 if __name__ == '__main__':
     # Create templates folder
     os.makedirs('templates', exist_ok=True)

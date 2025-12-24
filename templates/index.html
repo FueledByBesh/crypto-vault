@@ -438,6 +438,9 @@
           <button class="tab" onclick="showTab('blockchain')">
             ⛓️ Blockchain
           </button>
+          <button class="tab" onclick="showTab('messaging')">
+            💬 Secure Messaging
+          </button>
         </div>
 
         <!-- Files Tab -->
@@ -796,6 +799,86 @@
             📋 Load Blockchain Logs
           </button>
           <div id="blockchainLogs" style="margin-top: 20px"></div>
+        </div>
+
+        <!-- Messaging Tab -->
+        <div id="messagingTab" class="tab-content">
+          <h2>Secure Messaging</h2>
+          <div class="info-box">
+            <h4>About Secure Messaging:</h4>
+            <p>
+              Send encrypted messages to other users using ECDH key exchange,
+              AES-256-GCM encryption, and ECDSA digital signatures for
+              non-repudiation.
+            </p>
+          </div>
+
+          <div class="form-group">
+            <label>Select User to Chat With:</label>
+            <select id="userSelect" onchange="selectUser()">
+              <option value="">Choose a user...</option>
+            </select>
+          </div>
+
+          <div id="chatArea" style="display: none">
+            <div class="form-group">
+              <label>Your Public Key (share this with the peer):</label>
+              <textarea
+                id="myPublicKey"
+                readonly
+                rows="2"
+                style="width: 100%"
+              ></textarea>
+              <button class="btn" onclick="initializeMessaging()">
+                Initialize Messaging
+              </button>
+            </div>
+
+            <div class="form-group">
+              <label>Peer's Public Key:</label>
+              <textarea
+                id="peerPublicKey"
+                placeholder="Paste the peer's public key here..."
+                rows="2"
+                style="width: 100%"
+              ></textarea>
+              <button class="btn" onclick="establishSession()">
+                Establish Session
+              </button>
+            </div>
+
+            <div id="messageArea" style="display: none">
+              <div class="form-group">
+                <label>Chat with <span id="chatUser"></span></label>
+                <div
+                  id="messages"
+                  class="result-box"
+                  style="height: 300px; overflow-y: auto; margin-bottom: 10px"
+                ></div>
+                <textarea
+                  id="messageInput"
+                  placeholder="Type your message..."
+                  rows="3"
+                  style="width: 100%"
+                ></textarea>
+                <div style="margin-top: 10px">
+                  <button class="btn" onclick="sendMessage()" id="sendBtn">
+                    📤 Send Message
+                  </button>
+                  <button
+                    class="btn"
+                    onclick="receiveMessages()"
+                    id="receiveBtn"
+                    style="margin-left: 10px"
+                  >
+                    📥 Check Messages
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="message" id="messagingMessage"></div>
         </div>
       </div>
     </div>
@@ -1494,8 +1577,244 @@
           if (this.textContent.includes("Blockchain")) {
             setTimeout(loadBlockchainInfo, 100);
           }
+          if (this.textContent.includes("Secure Messaging")) {
+            setTimeout(loadMessagingUsers, 100);
+          }
         });
       });
+
+      // ==================== Secure Messaging ====================
+
+      let selectedUser = null;
+      let sessionEstablished = false;
+
+      async function loadMessagingUsers() {
+        try {
+          const response = await fetch("/api/messaging/users");
+          const data = await response.json();
+
+          if (data.success) {
+            const select = document.getElementById("userSelect");
+            select.innerHTML = '<option value="">Choose a user...</option>';
+
+            data.users.forEach((user) => {
+              const option = document.createElement("option");
+              option.value = user;
+              option.textContent = user;
+              select.appendChild(option);
+            });
+          } else {
+            showMessage("messagingMessage", data.message, "error");
+          }
+        } catch (error) {
+          showMessage(
+            "messagingMessage",
+            "Error loading users: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function selectUser() {
+        const select = document.getElementById("userSelect");
+        selectedUser = select.value;
+
+        if (!selectedUser) {
+          document.getElementById("chatArea").style.display = "none";
+          return;
+        }
+
+        document.getElementById("chatUser").textContent = selectedUser;
+        document.getElementById("chatArea").style.display = "block";
+        document.getElementById("messages").innerHTML = "";
+        sessionEstablished = false;
+
+        // Establish session with selected user
+        await establishSession();
+      }
+
+      async function establishSession() {
+        if (!selectedUser) return;
+
+        try {
+          // First, get peer's public key (this is a simplification - in real app,
+          // users would exchange keys out-of-band or through a server)
+          showMessage(
+            "messagingMessage",
+            "Establishing secure session...",
+            "success"
+          );
+
+          // For demo purposes, we'll assume the peer's public key is available
+          // In a real implementation, you'd need to get it from the peer
+          const peerKeyResponse = await fetch(
+            `/api/messaging/public_key/${selectedUser}`
+          );
+          if (!peerKeyResponse.ok) {
+            showMessage(
+              "messagingMessage",
+              "Cannot get peer's public key. Session establishment failed.",
+              "error"
+            );
+            return;
+          }
+
+          const peerKeyData = await peerKeyResponse.json();
+          if (!peerKeyData.success) {
+            showMessage("messagingMessage", peerKeyData.message, "error");
+            return;
+          }
+
+          // Establish session
+          const establishResponse = await fetch(
+            "/api/messaging/establish_session",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                peer_username: selectedUser,
+                peer_public_key: peerKeyData.public_key,
+              }),
+            }
+          );
+
+          const establishData = await establishResponse.json();
+          if (establishData.success) {
+            sessionEstablished = true;
+            showMessage(
+              "messagingMessage",
+              "Secure session established! You can now send messages.",
+              "success"
+            );
+          } else {
+            showMessage(
+              "messagingMessage",
+              "Failed to establish session: " + establishData.message,
+              "error"
+            );
+          }
+        } catch (error) {
+          showMessage(
+            "messagingMessage",
+            "Error establishing session: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function sendMessage() {
+        if (!selectedUser || !sessionEstablished) {
+          showMessage(
+            "messagingMessage",
+            "Please select a user and establish a session first.",
+            "error"
+          );
+          return;
+        }
+
+        const messageInput = document.getElementById("messageInput");
+        const message = messageInput.value.trim();
+
+        if (!message) {
+          showMessage("messagingMessage", "Please enter a message.", "error");
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/messaging/send", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              receiver: selectedUser,
+              message: message,
+              sign: true,
+            }),
+          });
+
+          const data = await response.json();
+          if (data.success) {
+            // Add message to chat
+            addMessage("You", message, new Date().toLocaleTimeString());
+            messageInput.value = "";
+            showMessage(
+              "messagingMessage",
+              "Message sent successfully!",
+              "success"
+            );
+          } else {
+            showMessage(
+              "messagingMessage",
+              "Failed to send message: " + data.message,
+              "error"
+            );
+          }
+        } catch (error) {
+          showMessage(
+            "messagingMessage",
+            "Error sending message: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      async function receiveMessages() {
+        if (!selectedUser) {
+          showMessage(
+            "messagingMessage",
+            "Please select a user first.",
+            "error"
+          );
+          return;
+        }
+
+        try {
+          const response = await fetch("/api/messaging/receive");
+          const data = await response.json();
+
+          if (data.success) {
+            data.messages.forEach((msg) => {
+              const time = new Date(msg.timestamp * 1000).toLocaleTimeString();
+              addMessage(msg.sender, msg.message, time, msg.signature_valid);
+            });
+
+            if (data.messages.length > 0) {
+              showMessage(
+                "messagingMessage",
+                `Received ${data.messages.length} message(s)!`,
+                "success"
+              );
+            } else {
+              showMessage("messagingMessage", "No new messages.", "success");
+            }
+          } else {
+            showMessage(
+              "messagingMessage",
+              "Failed to receive messages: " + data.message,
+              "error"
+            );
+          }
+        } catch (error) {
+          showMessage(
+            "messagingMessage",
+            "Error receiving messages: " + error.message,
+            "error"
+          );
+        }
+      }
+
+      function addMessage(sender, message, time, signatureValid = true) {
+        const messagesDiv = document.getElementById("messages");
+        const messageDiv = document.createElement("div");
+        messageDiv.style.marginBottom = "10px";
+        messageDiv.style.padding = "8px";
+        messageDiv.style.borderRadius = "5px";
+        messageDiv.style.background = sender === "You" ? "#e3f2fd" : "#f5f5f5";
+
+        const signatureIcon = signatureValid ? "✅" : "❌";
+        messageDiv.innerHTML = `<strong>${sender}</strong> [${time}] ${signatureIcon}<br>${message}`;
+        messagesDiv.appendChild(messageDiv);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      }
     </script>
   </body>
 </html>

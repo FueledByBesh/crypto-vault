@@ -16,11 +16,11 @@ class TestCryptoVaultIntegration:
         vault = CryptoVault()
         
         # Register user
-        success, msg = vault.register_user("alice", "SecurePass123!")
+        success, msg = vault.register_user("alice", "SecurePass!987")
         assert success
         
         # Login
-        success, token, msg = vault.login("alice", "SecurePass123!")
+        success, token, msg = vault.login("alice", "SecurePass!987")
         assert success
         assert token is not None
         
@@ -32,9 +32,9 @@ class TestCryptoVaultIntegration:
     def test_mfa_setup(self):
         """Test MFA setup flow."""
         vault = CryptoVault()
-        vault.register_user("alice", "SecurePass123!")
+        vault.register_user("alice", "SecurePass!987")
         
-        success, secret, backup_codes, qr_code = vault.setup_mfa("alice", "SecurePass123!")
+        success, secret, backup_codes, qr_code = vault.setup_mfa("alice", "SecurePass!987")
         assert success
         assert secret is not None
         assert backup_codes is not None
@@ -80,26 +80,29 @@ class TestCryptoVaultIntegration:
         vault = CryptoVault()
         
         # Register and login users
-        vault.register_user("alice", "SecurePass123!")
-        vault.register_user("bob", "SecurePass456!")
+        vault.register_user("alice", "SecurePass!987")
+        vault.register_user("bob", "SecurePass!654")
         
-        vault.login("alice", "SecurePass123!")
-        vault.login("bob", "SecurePass456!")
+        vault.login("alice", "SecurePass!987")
+        vault.login("bob", "SecurePass!654")
         
-        # Initialize messaging for both
+        # Get public keys
         alice_pub = vault.initialize_messaging("alice")
         bob_pub = vault.initialize_messaging("bob")
         
         # Establish sessions
-        alice_pub2, alice_verif = vault.establish_messaging_session("alice", bob_pub)
-        bob_pub2, bob_verif = vault.establish_messaging_session("bob", alice_pub, alice_verif)
+        vault.establish_messaging_session("alice", bob_pub)
+        vault.establish_messaging_session("bob", alice_pub)
         
         # Send message
         message = "Hello, Bob! This is a secret message."
-        encrypted, signature = vault.send_message("alice", message)
+        vault.send_message("alice", "bob", message)
         
         # Receive message
-        decrypted, sig_valid = vault.receive_message("bob", encrypted, signature)
+        messages = vault.get_messages("bob")
+        assert len(messages) == 1
+        sender, decrypted, sig_valid, timestamp = messages[0]
+        assert sender == "alice"
         assert decrypted == message
         assert sig_valid
     
@@ -108,8 +111,8 @@ class TestCryptoVaultIntegration:
         vault = CryptoVault()
         
         # Perform some actions
-        vault.register_user("alice", "SecurePass123!")
-        vault.login("alice", "SecurePass123!")
+        vault.register_user("alice", "SecurePass!987")
+        vault.login("alice", "SecurePass!987")
         
         # Validate blockchain
         is_valid, error = vault.validate_blockchain()
@@ -119,8 +122,8 @@ class TestCryptoVaultIntegration:
         """Test audit logging."""
         vault = CryptoVault(audit_log_file="test_audit.log")
         
-        vault.register_user("alice", "SecurePass123!")
-        vault.login("alice", "SecurePass123!")
+        vault.register_user("alice", "SecurePass!987")
+        vault.login("alice", "SecurePass!987")
         
         # Get recent logs
         logs = vault.get_recent_audit_logs(10)

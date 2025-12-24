@@ -10,7 +10,7 @@ import hashlib
 from typing import Optional, Dict, Tuple
 from dataclasses import dataclass, field
 from cryptovault.auth.password_validator import PasswordValidator
-from cryptovault.file_encryption.file_encryptor import FileEncryptor
+from cryptovault.core.database import SimpleDatabase
 import json
 import os
 BCRYPT_AVAILABLE = False
@@ -67,12 +67,7 @@ class UserManager:
         self.lockout_duration = lockout_duration
         
         # For persistence
-        self.file_encryptor = FileEncryptor()
-        self.users_file = "users.enc"
-        self.master_password = "cryptovault_master_key_2024"  # Fixed master password for users file
-        
-        # Session secret for HMAC (should be loaded from secure config in production)
-        self.session_secret = secrets.token_bytes(32)
+        self.db = SimpleDatabase("data/users.json")
         
         # Load existing users
         self.load_users()
@@ -341,7 +336,7 @@ class UserManager:
         return True
     
     def save_users(self):
-        """Save users to encrypted file."""
+        """Save users to database."""
         try:
             users_data = {}
             for username, user in self.users.items():
@@ -358,36 +353,14 @@ class UserManager:
                     'mfa_enabled': user.mfa_enabled
                 }
             
-            json_data = json.dumps(users_data, indent=2).encode('utf-8')
-            
-            # Write to temp file, encrypt, then save
-            temp_file = "temp_users.json"
-            with open(temp_file, 'wb') as f:
-                f.write(json_data)
-            
-            self.file_encryptor.encrypt_file(self.master_password, temp_file, self.users_file)
-            
-            # Remove temp file
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+            self.db.set('users', users_data)
         except Exception as e:
             print(f"Error saving users: {e}")
-            # Clean up temp file
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
     
     def load_users(self):
-        """Load users from encrypted file."""
-        if not os.path.exists(self.users_file):
-            return
-        
-        temp_file = "temp_users_decrypted.json"
+        """Load users from database."""
         try:
-            self.file_encryptor.decrypt_file(self.master_password, self.users_file, temp_file)
-            
-            with open(temp_file, 'rb') as f:
-                data = f.read().decode('utf-8')
-                users_data = json.loads(data)
+            users_data = self.db.get('users', {})
             
             for username, data in users_data.items():
                 user = User(
@@ -403,13 +376,15 @@ class UserManager:
                     mfa_enabled=data['mfa_enabled']
                 )
                 self.users[username] = user
-            
-            # Remove temp file
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
         except Exception as e:
             print(f"Error loading users: {e}")
-            # Clean up temp file
-            if os.path.exists(temp_file):
-                os.remove(temp_file)
+    
+    def get_all_users(self) -> list[str]:
+        """
+        Get list of all registered usernames.
+        
+        Returns:
+            List of usernames
+        """
+        return list(self.users.keys())
 

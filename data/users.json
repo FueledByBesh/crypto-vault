@@ -1,0 +1,16 @@
+{
+  "users": {
+    "olzhas": {
+      "username": "olzhas",
+      "password_hash": "$argon2id$v=19$m=65536,t=3,p=4$hkvwYEl/IUISr1ZI3xOztw$jLHbjP5CS2a94g1Lr5uhJG1Lg9vE4zVvRJaclkIxivI",
+      "salt": "623422a3346bfcfb14a5714c43a6e5cf",
+      "created_at": 1766595412.4643981,
+      "failed_login_attempts": 0,
+      "last_failed_login": 0.0,
+      "locked_until": 0.0,
+      "totp_secret": null,
+      "backup_codes": {},
+      "mfa_enabled": false
+    }
+  }
+}

@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
+from cryptography.hazmat.primitives import serialization
 
 
 class ECDHKeyExchange:
@@ -62,7 +63,7 @@ class ECDHKeyExchange:
             32-byte session key for AES-256
         """
         if salt is None:
-            salt = secrets.token_bytes(16)
+            salt = b"CryptoVaultSalt"
         
         if info is None:
             info = b"CryptoVault Session Key"
@@ -88,8 +89,8 @@ class ECDHKeyExchange:
             Serialized public key bytes
         """
         return public_key.public_bytes(
-            encoding=ec.serialization.Encoding.X962,
-            format=ec.serialization.PublicFormat.UncompressedPoint
+            encoding=serialization.Encoding.X962,
+            format=serialization.PublicFormat.UncompressedPoint
         )
     
     def deserialize_public_key(self, key_bytes: bytes) -> ec.EllipticCurvePublicKey:

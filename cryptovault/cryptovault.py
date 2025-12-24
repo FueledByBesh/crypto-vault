@@ -4,12 +4,14 @@ Connects all modules into a unified cryptographic security suite.
 """
 
 from math import log
-from typing import Optional, Tuple, Dict
+from typing import Optional, Tuple, Dict, List
+import time
 from cryptovault.auth.user_manager import UserManager
 from cryptovault.auth.mfa import MFA
 from cryptovault.messaging.secure_messenger import SecureMessenger
 from cryptovault.file_encryption.file_encryptor import FileEncryptor
 from cryptovault.blockchain.blockchain import Blockchain
+from cryptovault.core.database import SimpleDatabase
 from cryptovault.logging.audit_logger import AuditLogger
 
 
@@ -32,11 +34,58 @@ class CryptoVault:
         self.audit_logger = AuditLogger(audit_log_file)
         self.blockchain = Blockchain(blockchain_difficulty)
         
-        # Per-user messaging sessions
+        # Database for persistence
+        self.db = SimpleDatabase("data/cryptovault.json")
+        
+        # Per-user messaging sessions: {username: SecureMessenger}
         self.messaging_sessions: Dict[str, SecureMessenger] = {}
+        
+        # Message store: {receiver: [(sender, encrypted_message, signature, timestamp), ...]}
+        self.message_store: Dict[str, List[Tuple[str, bytes, Optional[bytes], float]]] = {}
+        
+        # Load persistent data
+        self.load_persistent_data()
         
         # Per-user file encryptors (keyed by username)
         self.file_encryptors: Dict[str, FileEncryptor] = {}
+    
+    def load_persistent_data(self):
+        """Load persistent data from database."""
+        try:
+            # Load message store
+            message_data = self.db.get('messages', {})
+            for receiver, messages in message_data.items():
+                self.message_store[receiver] = []
+                for msg_data in messages:
+                    message_tuple = (
+                        msg_data['sender'],
+                        bytes.fromhex(msg_data['encrypted_message']),
+                        bytes.fromhex(msg_data['signature']) if msg_data['signature'] else None,
+                        msg_data['timestamp']
+                    )
+                    self.message_store[receiver].append(message_tuple)
+        except Exception as e:
+            print(f"Error loading persistent data: {e}")
+    
+    def save_persistent_data(self):
+        """Save persistent data to database."""
+        try:
+            # Save message store
+            message_data = {}
+            for receiver, messages in self.message_store.items():
+                message_data[receiver] = []
+                for sender, encrypted_msg, signature, timestamp in messages:
+                    msg_data = {
+                        'sender': sender,
+                        'encrypted_message': encrypted_msg.hex(),
+                        'signature': signature.hex() if signature else None,
+                        'timestamp': timestamp
+                    }
+                    message_data[receiver].append(msg_data)
+            
+            self.db.set('messages', message_data)
+        except Exception as e:
+            print(f"Error saving persistent data: {e}")
     
     # ==================== Authentication ====================
     
@@ -193,59 +242,71 @@ class CryptoVault:
     
     def initialize_messaging(self, username: str) -> bytes:
         """
-        Initialize secure messaging session for user.
+        Initialize messaging for user.
         
         Args:
             username: Username
             
         Returns:
-            Public key bytes to share with peer
+            Public key bytes
         """
-        messenger = SecureMessenger()
-        public_key = messenger.initialize_session()
-        self.messaging_sessions[username] = messenger
-        return public_key
+        if username not in self.messaging_sessions:
+            messenger = SecureMessenger()
+            pub, _ = messenger.establish_session(None)
+            self.messaging_sessions[username] = messenger
+        else:
+            messenger = self.messaging_sessions[username]
+            pub = messenger.key_exchange.serialize_public_key(messenger.public_key)
+        return pub
     
-    def establish_messaging_session(self, username: str, peer_public_key: bytes,
-                                    peer_verification_key: Optional[bytes] = None) -> Tuple[bytes, Optional[bytes]]:
+    def establish_messaging_session(self, username: str, peer_public_key: bytes) -> bytes:
         """
         Establish messaging session with peer.
         
         Args:
             username: Username
             peer_public_key: Peer's ECDH public key
-            peer_verification_key: Peer's signature verification key
             
         Returns:
-            Tuple of (our_public_key, our_verification_key)
+            Our public key
         """
         if username not in self.messaging_sessions:
-            self.initialize_messaging(username)
+            raise ValueError("Messaging not initialized for user")
         
         messenger = self.messaging_sessions[username]
-        return messenger.establish_session(peer_public_key, peer_verification_key)
+        our_pub, _ = messenger.establish_session(peer_public_key)
+        return our_pub
     
-    def send_message(self, username: str, message: str, sign: bool = True) -> Tuple[bytes, Optional[bytes]]:
+    def send_message(self, sender_username: str, receiver_username: str, message: str, sign: bool = True) -> bool:
         """
-        Send encrypted message.
+        Send encrypted message to another user.
         
         Args:
-            username: Sender username
+            sender_username: Sender username
+            receiver_username: Receiver username
             message: Plaintext message
             sign: Whether to sign message
             
         Returns:
-            Tuple of (encrypted_message, signature)
+            True if sent successfully
         """
-        if username not in self.messaging_sessions:
-            raise ValueError("Messaging session not initialized")
+        if sender_username not in self.messaging_sessions:
+            raise ValueError("Messaging session not established")
         
-        messenger = self.messaging_sessions[username]
+        messenger = self.messaging_sessions[sender_username]
         encrypted, signature = messenger.send_message(message, sign)
+        
+        # Store message for receiver
+        if receiver_username not in self.message_store:
+            self.message_store[receiver_username] = []
+        self.message_store[receiver_username].append((sender_username, encrypted, signature, time.time()))
+        
+        # Save to persistent storage
+        self.save_persistent_data()
         
         # Log messaging event
         self.audit_logger.log_messaging_event(
-            username=username,
+            username=sender_username,
             action="send",
             success=True
         )
@@ -253,40 +314,67 @@ class CryptoVault:
         # Create blockchain transaction
         tx = self.blockchain.create_transaction(
             action="send_message",
-            user=username,
-            data=f"Message sent (length: {len(message)})"
+            user=sender_username,
+            data=f"Message sent to {receiver_username} (length: {len(message)})"
         )
         self.blockchain.add_transaction(tx)
         
-        return (encrypted, signature)
+        return True
     
-    def receive_message(self, username: str, encrypted_message: bytes,
-                       signature: Optional[bytes] = None) -> Tuple[str, bool]:
+    def get_messages(self, username: str) -> List[Tuple[str, str, bool, float]]:
         """
-        Receive and decrypt message.
+        Get and decrypt pending messages for user.
         
         Args:
-            username: Receiver username
-            encrypted_message: Encrypted message
-            signature: Optional signature
+            username: Username
             
         Returns:
-            Tuple of (decrypted_message, signature_valid)
+            List of (sender, message, signature_valid, timestamp)
         """
-        if username not in self.messaging_sessions:
-            raise ValueError("Messaging session not established")
+        if username not in self.message_store:
+            return []
         
-        messenger = self.messaging_sessions[username]
-        message, sig_valid = messenger.receive_message(encrypted_message, signature)
+        messages = []
+        remaining_messages = []
         
-        # Log messaging event
-        self.audit_logger.log_messaging_event(
-            username=username,
-            action="receive",
-            success=True
-        )
+        for sender, encrypted, signature, timestamp in self.message_store[username]:
+            try:
+                if username not in self.messaging_sessions:
+                    # Cannot decrypt without session
+                    remaining_messages.append((sender, encrypted, signature, timestamp))
+                    continue
+                
+                messenger = self.messaging_sessions[username]
+                message, sig_valid = messenger.receive_message(encrypted, signature)
+                messages.append((sender, message, sig_valid, timestamp))
+                
+                # Log messaging event
+                self.audit_logger.log_messaging_event(
+                    username=username,
+                    action="receive",
+                    success=True
+                )
+            except Exception as e:
+                # Keep message if decryption fails
+                remaining_messages.append((sender, encrypted, signature, timestamp))
         
-        return (message, sig_valid)
+        # Update message store with remaining messages
+        self.message_store[username] = remaining_messages
+        
+        return messages
+    
+    def get_users_for_messaging(self, current_username: str) -> List[str]:
+        """
+        Get list of users available for messaging (excluding current user).
+        
+        Args:
+            current_username: Current user
+            
+        Returns:
+            List of usernames
+        """
+        users = self.user_manager.get_all_users()
+        return [u for u in users if u != current_username]
     
     # ==================== File Encryption ====================
     

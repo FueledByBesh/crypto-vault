@@ -44,54 +44,54 @@ class SecureMessenger:
         Returns:
             Serialized public key to send to peer
         """
-        # Generate ECDH key pair
+        # Generate key pair for both ECDH and signing
         self.private_key, self.public_key = self.key_exchange.generate_key_pair()
         
-        # Generate signing key pair
-        self.signing_key, self.verification_key = self.signature.generate_key_pair()
+        # Use the same key pair for signing
+        self.signing_key = self.private_key
+        self.verification_key = self.public_key
         
         return self.key_exchange.serialize_public_key(self.public_key)
     
-    def establish_session(self, peer_public_key_bytes: bytes,
+    def establish_session(self, peer_public_key_bytes: Optional[bytes] = None,
                          peer_verification_key_bytes: Optional[bytes] = None) -> Tuple[bytes, Optional[bytes]]:
         """
         Establish session with peer's public key.
         
         Args:
-            peer_public_key_bytes: Peer's ECDH public key
+            peer_public_key_bytes: Peer's ECDH public key (optional)
             peer_verification_key_bytes: Peer's signature verification key (optional)
             
         Returns:
             Tuple of (our_public_key_bytes, our_verification_key_bytes)
         """
-        # Initialize our session
-        our_public_key_bytes = self.initialize_session()
-        
-        # Deserialize peer's public key
-        peer_public_key = self.key_exchange.deserialize_public_key(peer_public_key_bytes)
-        
-        # Derive shared secret
-        shared_secret = self.key_exchange.derive_shared_secret(
-            self.private_key,
-            peer_public_key
-        )
-        
-        # Derive session key using HKDF
-        self.session_key = self.key_exchange.derive_session_key(shared_secret)
-        
-        # Initialize encryption
-        self.encryption = MessageEncryption(self.session_key)
-        
-        # Store peer's verification key if provided
-        if peer_verification_key_bytes:
-            self.peer_verification_key = self.signature.deserialize_public_key(
-                peer_verification_key_bytes
-            )
+        # Initialize our session if not already
+        if self.private_key is None:
+            our_public_key_bytes = self.initialize_session()
         else:
-            self.peer_verification_key = None
+            our_public_key_bytes = self.key_exchange.serialize_public_key(self.public_key)
         
-        our_verification_key_bytes = self.signature.serialize_public_key(
-            self.verification_key
+        if peer_public_key_bytes is not None:
+            # Deserialize peer's public key
+            peer_public_key = self.key_exchange.deserialize_public_key(peer_public_key_bytes)
+            
+            # Derive shared secret
+            shared_secret = self.key_exchange.derive_shared_secret(
+                self.private_key,
+                peer_public_key
+            )
+            
+            # Derive session key using HKDF
+            self.session_key = self.key_exchange.derive_session_key(shared_secret)
+            
+            # Initialize encryption
+            self.encryption = MessageEncryption(self.session_key)
+            
+            # Store peer's verification key (same as peer's public key)
+            self.peer_verification_key = peer_public_key
+        
+        our_verification_key_bytes = self.key_exchange.serialize_public_key(
+            self.public_key
         )
         
         return (our_public_key_bytes, our_verification_key_bytes)
